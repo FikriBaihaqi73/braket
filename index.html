@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Bracket - Pro</title>
+    <style>
+        :root {
+            --neon: #00f2ff;
+            --bg: #050508;
+            --card: rgba(20, 20, 30, 0.8);
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #101020 0%, #050508 100%);
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+        }
+
+        /* Three.js Layer - Hidden by default */
+        #three-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            display: none;
+            background: #000;
+        }
+
+        #app {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        /* Panel Setup */
+        #setup-panel {
+            background: var(--card);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            margin: auto;
+        }
+
+        h1 {
+            color: var(--neon);
+            text-shadow: 0 0 10px var(--neon);
+            margin-bottom: 20px;
+        }
+
+        .input-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #000;
+            color: white;
+            outline: none;
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .btn-primary {
+            background: var(--neon);
+            color: black;
+        }
+
+        .btn-generate {
+            background: white;
+            width: 100%;
+            margin-top: 20px;
+            font-size: 1.1em;
+        }
+
+        #list-tampil {
+            text-align: left;
+            padding: 0;
+            list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 15px 0;
+        }
+
+        #list-tampil li {
+            padding: 8px;
+            border-bottom: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Bracket View */
+        #bracket-view {
+            display: none;
+            gap: 40px;
+            justify-content: center;
+            padding-top: 50px;
+            width: 100%;
+            min-height: 80vh;
+        }
+
+        .round {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 40px;
+        }
+
+        .matchup {
+            border-left: 2px solid #333;
+            padding-left: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            position: relative;
+        }
+
+        .slot {
+            width: 180px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #444;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .slot:hover {
+            border-color: var(--neon);
+            background: rgba(0, 242, 255, 0.1);
+        }
+
+        .slot.winner {
+            background: var(--neon);
+            color: black;
+            border-color: var(--neon);
+            box-shadow: 0 0 15px var(--neon);
+        }
+
+        .champ-container {
+            text-align: center;
+        }
+
+        .champ-container h3 {
+            margin-bottom: 10px;
+            color: gold;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .champ {
+            height: 60px;
+            font-weight: bold;
+            font-size: 1.2em;
+            border: 2px solid gold;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="three-container"></div>
+
+    <div id="app">
+        <div id="setup-panel">
+            <h1>BRACKET MAKER</h1>
+            <div class="input-box">
+                <input type="text" id="team-in" placeholder="Nama Tim..." onkeyup="if(event.key==='Enter') addTeam()">
+                <button class="btn-primary" onclick="addTeam()">+</button>
+            </div>
+            <ul id="list-tampil"></ul>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn-generate" style="margin-top:0" onclick="startShuffle()">KOCOK & BUAT</button>
+                <button class="btn-primary" style="background: #ff4444; color: white; flex-shrink: 0;"
+                    onclick="resetTeams()">RESET</button>
+            </div>
+        </div>
+
+        <div id="bracket-view-container"
+            style="display: none; flex-direction: column; align-items: center; width: 100%;">
+            <div class="controls" style="margin-bottom: 30px; display: flex; gap: 10px; z-index: 100;">
+                <button class="btn-primary"
+                    style="background: rgba(255,255,255,0.1); color: white; border: 1px solid #444;"
+                    onclick="backToSetup()">← KEMBALI</button>
+                <button class="btn-primary" onclick="reshuffle()">KOCOK ULANG</button>
+            </div>
+            <div id="bracket-view"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+    <script>
+        let teams = [];
+
+        // --- FUNGSI INPUT ---
+        function addTeam() {
+            const inp = document.getElementById('team-in');
+            if (inp.value.trim()) {
+                teams.push(inp.value.trim());
+                inp.value = "";
+                renderList();
+            }
+        }
+
+        function renderList() {
+            document.getElementById('list-tampil').innerHTML = teams.map((t, i) =>
+                `<li>${t} <span style="color:red;cursor:pointer" onclick="teams.splice(${i},1);renderList()">hapus</span></li>`
+            ).join('');
+        }
+
+        // --- FUNGSI SHUFFLE DENGAN ANIMASI THREE.JS ---
+        function startShuffle() {
+            if (teams.length < 2) return alert("Minimal 2 tim!");
+
+            const container = document.getElementById('three-container');
+            container.style.display = 'block';
+
+            // Jalankan Animasi Three.js
+            runThreeAnimation(() => {
+                // Selesai animasi (Callback)
+                container.style.display = 'none';
+                document.getElementById('setup-panel').style.display = 'none';
+                document.getElementById('bracket-view-container').style.display = 'flex';
+                document.getElementById('bracket-view').style.display = 'flex';
+
+                generateBracket();
+            });
+        }
+
+        function reshuffle() {
+            if (confirm("Kocok ulang urutan tim? Semua hasil pertandingan saat ini akan hilang.")) {
+                const container = document.getElementById('three-container');
+                container.style.display = 'block';
+
+                runThreeAnimation(() => {
+                    container.style.display = 'none';
+                    generateBracket();
+                });
+            }
+        }
+
+        function backToSetup() {
+            document.getElementById('setup-panel').style.display = 'block';
+            document.getElementById('bracket-view-container').style.display = 'none';
+        }
+
+        function resetTeams() {
+            if (teams.length > 0 && confirm("Hapus semua tim dari daftar?")) {
+                teams = [];
+                renderList();
+            }
+        }
+
+        // --- LOGIKA THREE.JS (ANIMASI KOCOK) ---
+        function runThreeAnimation(onComplete) {
+            const container = document.getElementById('three-container');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.innerHTML = ""; // Clear
+            container.appendChild(renderer.domElement);
+
+            // Buat Bola-bola Partikel (Representasi Tim)
+            const group = new THREE.Group();
+            const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+
+            for (let i = 0; i < 50; i++) {
+                const material = new THREE.MeshBasicMaterial({
+                    color: i % 2 === 0 ? 0x00f2ff : 0xffffff,
+                    wireframe: true
+                });
+                const sphere = new THREE.Mesh(geometry, material);
+                sphere.position.set(
+                    (Math.random() - 0.5) * 20,
+                    (Math.random() - 0.5) * 20,
+                    (Math.random() - 0.5) * 20
+                );
+                group.add(sphere);
+            }
+            scene.add(group);
+            camera.position.z = 15;
+
+            let startTime = Date.now();
+
+            function animate() {
+                let elapsed = Date.now() - startTime;
+
+                // Putar semakin cepat
+                group.rotation.y += 0.05 + (elapsed / 1000) * 0.1;
+                group.rotation.x += 0.02;
+
+                renderer.render(scene, camera);
+
+                if (elapsed < 2000) { // Durasi animasi 2 detik
+                    requestAnimationFrame(animate);
+                } else {
+                    onComplete();
+                }
+            }
+            animate();
+        }
+
+        // --- LOGIKA BRACKET ---
+        function generateBracket() {
+            const view = document.getElementById('bracket-view');
+            let shuffled = [...teams].sort(() => Math.random() - 0.5);
+
+            // Padding BYE
+            let nextPow2 = Math.pow(2, Math.ceil(Math.log2(shuffled.length)));
+            while (shuffled.length < nextPow2) shuffled.push("BYE");
+
+            let rounds = Math.log2(shuffled.length);
+            view.innerHTML = "";
+
+            for (let r = 0; r <= rounds; r++) {
+                const roundDiv = document.createElement('div');
+                roundDiv.className = 'round';
+                roundDiv.id = `round-${r}`;
+
+                if (r === rounds) {
+                    roundDiv.innerHTML = `
+                        <div class="champ-container">
+                            <h3>JUARA</h3>
+                            <div class="slot champ" id="winner-final">?</div>
+                        </div>
+                    `;
+                } else {
+                    let matches = shuffled.length / Math.pow(2, r + 1);
+                    for (let m = 0; m < matches; m++) {
+                        const matchup = document.createElement('div');
+                        matchup.className = 'matchup';
+                        const t1 = r === 0 ? shuffled[m * 2] : "?";
+                        const t2 = r === 0 ? shuffled[m * 2 + 1] : "?";
+                        matchup.innerHTML = `
+                            <div class="slot" data-r="${r}" data-m="${m}" onclick="pilih(this)">${t1}</div>
+                            <div class="slot" data-r="${r}" data-m="${m}" onclick="pilih(this)">${t2}</div>
+                        `;
+                        roundDiv.appendChild(matchup);
+                    }
+                }
+                view.appendChild(roundDiv);
+            }
+        }
+
+        function pilih(el) {
+            const nama = el.innerText;
+            if (nama === "?" || nama === "BYE") return;
+
+            // Highlight
+            const parent = el.parentElement;
+            parent.querySelectorAll('.slot').forEach(s => s.classList.remove('winner'));
+            el.classList.add('winner');
+
+            // Maju Ronde
+            const r = parseInt(el.dataset.r);
+            const m = parseInt(el.dataset.m);
+            const nextR = r + 1;
+            const nextM = Math.floor(m / 2);
+            const slotIdx = m % 2;
+
+            const nextRound = document.getElementById(`round-${nextR}`);
+            if (nextRound) {
+                const slots = nextRound.querySelectorAll('.slot');
+                if (slots.length === 1) {
+                    slots[0].innerText = nama;
+                } else {
+                    const targetMatchup = nextRound.querySelectorAll('.matchup')[nextM];
+                    targetMatchup.querySelectorAll('.slot')[slotIdx].innerText = nama;
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
