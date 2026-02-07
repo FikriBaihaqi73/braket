@@ -193,6 +193,21 @@
             border: 2px solid gold;
             margin: 0 auto;
         }
+
+        /* Drag and Drop Styles */
+        .slot.drag-over {
+            border-color: var(--neon) !important;
+            background: rgba(0, 242, 255, 0.2) !important;
+            transform: scale(1.05);
+        }
+
+        .slot[draggable="true"] {
+            cursor: grab;
+        }
+
+        .slot[draggable="true"]:active {
+            cursor: grabbing;
+        }
     </style>
 </head>
 
@@ -405,10 +420,35 @@
                         matchup.className = 'matchup';
                         const t1 = r === 0 ? shuffled[m * 2] : "?";
                         const t2 = r === 0 ? shuffled[m * 2 + 1] : "?";
-                        matchup.innerHTML = `
-                            <div class="slot" data-r="${r}" data-m="${m}" onclick="pilih(this)">${t1}</div>
-                            <div class="slot" data-r="${r}" data-m="${m}" onclick="pilih(this)">${t2}</div>
-                        `;
+
+                        // Buat element slot 1
+                        const slot1 = document.createElement('div');
+                        slot1.className = 'slot';
+                        slot1.dataset.r = r;
+                        slot1.dataset.m = m;
+                        slot1.onclick = function () { pilih(this); };
+                        slot1.innerText = t1;
+
+                        // Buat element slot 2
+                        const slot2 = document.createElement('div');
+                        slot2.className = 'slot';
+                        slot2.dataset.r = r;
+                        slot2.dataset.m = m;
+                        slot2.onclick = function () { pilih(this); };
+                        slot2.innerText = t2;
+
+                        // Aktifkan Drag & Drop
+                        [slot1, slot2].forEach(s => {
+                            s.draggable = true;
+                            s.addEventListener('dragstart', handleDragStart);
+                            s.addEventListener('dragover', handleDragOver);
+                            s.addEventListener('dragleave', handleDragLeave);
+                            s.addEventListener('drop', handleDrop);
+                            s.addEventListener('dragend', handleDragEnd);
+                        });
+
+                        matchup.appendChild(slot1);
+                        matchup.appendChild(slot2);
                         roundDiv.appendChild(matchup);
                     }
                 }
@@ -480,6 +520,58 @@
                     clearPath(nextR, nextM); // Bersihkan ronde selanjutnya secara rekursif
                 }
             }
+        }
+        // --- DRAG & DROP LOGIC ---
+        let draggedEl = null;
+
+        function handleDragStart(e) {
+            if (this.innerText === "?" || this.innerText === "BYE") {
+                e.preventDefault();
+                return;
+            }
+            draggedEl = this;
+            this.style.opacity = '0.4';
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) e.preventDefault();
+            if (this.dataset.r === draggedEl.dataset.r) {
+                this.classList.add('drag-over');
+            }
+            return false;
+        }
+
+        function handleDragLeave() {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDragEnd() {
+            this.style.opacity = '1';
+            const allSlots = document.querySelectorAll('.slot');
+            allSlots.forEach(s => s.classList.remove('drag-over'));
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) e.stopPropagation();
+
+            // Hanya izinkan swap di ronde yang sama
+            if (draggedEl && draggedEl !== this && this.dataset.r === draggedEl.dataset.r) {
+                const tempText = this.innerText;
+                this.innerText = draggedEl.innerText;
+                draggedEl.innerText = tempText;
+
+                // Reset status pemenang karena posisi berubah
+                this.classList.remove('winner');
+                draggedEl.classList.remove('winner');
+
+                // Bersihkan jalur ke depan karena matchup berubah
+                clearPath(parseInt(this.dataset.r), parseInt(this.dataset.m));
+                clearPath(parseInt(draggedEl.dataset.r), parseInt(draggedEl.dataset.m));
+
+                saveData();
+            }
+            return false;
         }
     </script>
 </body>
