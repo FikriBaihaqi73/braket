@@ -421,29 +421,65 @@
             const nama = el.innerText;
             if (nama === "?" || nama === "BYE") return;
 
-            // Highlight
-            const parent = el.parentElement;
-            parent.querySelectorAll('.slot').forEach(s => s.classList.remove('winner'));
-            el.classList.add('winner');
-
-            // Maju Ronde
             const r = parseInt(el.dataset.r);
             const m = parseInt(el.dataset.m);
+            const isAlreadyWinner = el.classList.contains('winner');
+
+            // Bersihkan jalur ke depan dari pertandingan ini
+            clearPath(r, m);
+
+            if (isAlreadyWinner) {
+                // Jika diklik lagi, hapus status pemenang
+                el.classList.remove('winner');
+            } else {
+                // Pilih pemenang baru
+                const parent = el.parentElement;
+                parent.querySelectorAll('.slot').forEach(s => s.classList.remove('winner'));
+                el.classList.add('winner');
+
+                const nextR = r + 1;
+                const nextM = Math.floor(m / 2);
+                const slotIdx = m % 2;
+
+                const nextRound = document.getElementById(`round-${nextR}`);
+                if (nextRound) {
+                    const slots = nextRound.querySelectorAll('.slot');
+                    if (slots.length === 1) {
+                        slots[0].innerText = nama;
+                    } else {
+                        const targetMatchup = nextRound.querySelectorAll('.matchup')[nextM];
+                        targetMatchup.querySelectorAll('.slot')[slotIdx].innerText = nama;
+                    }
+                }
+            }
+            saveData();
+        }
+
+        // Fungsi rekursif untuk mengosongkan jalur jika pemenang dibatalkan atau diganti
+        function clearPath(r, m) {
             const nextR = r + 1;
             const nextM = Math.floor(m / 2);
             const slotIdx = m % 2;
 
             const nextRound = document.getElementById(`round-${nextR}`);
-            if (nextRound) {
-                const slots = nextRound.querySelectorAll('.slot');
-                if (slots.length === 1) {
-                    slots[0].innerText = nama;
-                } else {
-                    const targetMatchup = nextRound.querySelectorAll('.matchup')[nextM];
-                    targetMatchup.querySelectorAll('.slot')[slotIdx].innerText = nama;
+            if (!nextRound) return;
+
+            const slots = nextRound.querySelectorAll('.slot');
+            let targetSlot;
+            if (slots.length === 1) {
+                targetSlot = slots[0];
+            } else {
+                const targetMatchup = nextRound.querySelectorAll('.matchup')[nextM];
+                targetSlot = targetMatchup.querySelectorAll('.slot')[slotIdx];
+            }
+
+            if (targetSlot) {
+                targetSlot.innerText = "?";
+                if (targetSlot.classList.contains('winner')) {
+                    targetSlot.classList.remove('winner');
+                    clearPath(nextR, nextM); // Bersihkan ronde selanjutnya secara rekursif
                 }
             }
-            saveData();
         }
     </script>
 </body>
