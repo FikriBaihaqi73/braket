@@ -232,6 +232,36 @@
     <script>
         let teams = [];
 
+        // --- LOCAL STORAGE LOGIC ---
+        function saveData() {
+            const state = {
+                teams: teams,
+                currentView: document.getElementById('setup-panel').style.display === 'none' ? 'bracket' : 'setup',
+                bracketHTML: document.getElementById('bracket-view').innerHTML,
+                bracketViewDisplay: document.getElementById('bracket-view').style.display,
+                bracketContainerDisplay: document.getElementById('bracket-view-container').style.display
+            };
+            localStorage.setItem('tournamentState', JSON.stringify(state));
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('tournamentState');
+            if (saved) {
+                const state = JSON.parse(saved);
+                teams = state.teams || [];
+                renderList();
+
+                if (state.currentView === 'bracket') {
+                    document.getElementById('setup-panel').style.display = 'none';
+                    document.getElementById('bracket-view-container').style.display = state.bracketContainerDisplay;
+                    document.getElementById('bracket-view').style.display = state.bracketViewDisplay;
+                    document.getElementById('bracket-view').innerHTML = state.bracketHTML;
+                }
+            }
+        }
+
+        window.onload = loadData;
+
         // --- FUNGSI INPUT ---
         function addTeam() {
             const inp = document.getElementById('team-in');
@@ -239,12 +269,13 @@
                 teams.push(inp.value.trim());
                 inp.value = "";
                 renderList();
+                saveData();
             }
         }
 
         function renderList() {
             document.getElementById('list-tampil').innerHTML = teams.map((t, i) =>
-                `<li>${t} <span style="color:red;cursor:pointer" onclick="teams.splice(${i},1);renderList()">hapus</span></li>`
+                `<li>${t} <span style="color:red;cursor:pointer" onclick="teams.splice(${i},1);renderList();saveData()">hapus</span></li>`
             ).join('');
         }
 
@@ -282,12 +313,14 @@
         function backToSetup() {
             document.getElementById('setup-panel').style.display = 'block';
             document.getElementById('bracket-view-container').style.display = 'none';
+            saveData();
         }
 
         function resetTeams() {
             if (teams.length > 0 && confirm("Hapus semua tim dari daftar?")) {
                 teams = [];
                 renderList();
+                localStorage.removeItem('tournamentState');
             }
         }
 
@@ -381,6 +414,7 @@
                 }
                 view.appendChild(roundDiv);
             }
+            saveData();
         }
 
         function pilih(el) {
@@ -409,6 +443,7 @@
                     targetMatchup.querySelectorAll('.slot')[slotIdx].innerText = nama;
                 }
             }
+            saveData();
         }
     </script>
 </body>
