@@ -218,6 +218,10 @@
     <div id="app">
         <div id="setup-panel">
             <h1>BRACKET MAKER</h1>
+            <div class="input-box" style="margin-bottom: 25px;">
+                <input type="text" id="tournament-name-in" placeholder="Nama Turnamen (opsional)..."
+                    onkeyup="saveData()" style="border-color: var(--neon); box-shadow: 0 0 5px rgba(0, 242, 255, 0.2);">
+            </div>
             <div class="input-box">
                 <input type="text" id="team-in" placeholder="Nama Tim..." onkeyup="if(event.key==='Enter') addTeam()">
                 <button class="btn-primary" onclick="addTeam()">+</button>
@@ -232,6 +236,7 @@
 
         <div id="bracket-view-container"
             style="display: none; flex-direction: column; align-items: center; width: 100%;">
+            <h1 id="tournament-title" style="margin-bottom: 10px;"></h1>
             <div class="controls" style="margin-bottom: 30px; display: flex; gap: 10px; z-index: 100;">
                 <button class="btn-primary"
                     style="background: rgba(255,255,255,0.1); color: white; border: 1px solid #444;"
@@ -251,6 +256,7 @@
         function saveData() {
             const state = {
                 teams: teams,
+                tournamentName: document.getElementById('tournament-name-in').value,
                 currentView: document.getElementById('setup-panel').style.display === 'none' ? 'bracket' : 'setup',
                 bracketHTML: document.getElementById('bracket-view').innerHTML,
                 bracketViewDisplay: document.getElementById('bracket-view').style.display,
@@ -264,6 +270,7 @@
             if (saved) {
                 const state = JSON.parse(saved);
                 teams = state.teams || [];
+                document.getElementById('tournament-name-in').value = state.tournamentName || "";
                 renderList();
 
                 if (state.currentView === 'bracket') {
@@ -271,6 +278,7 @@
                     document.getElementById('bracket-view-container').style.display = state.bracketContainerDisplay;
                     document.getElementById('bracket-view').style.display = state.bracketViewDisplay;
                     document.getElementById('bracket-view').innerHTML = state.bracketHTML;
+                    document.getElementById('tournament-title').innerText = state.tournamentName || "TOURNAMENT BRACKET";
                 }
             }
         }
@@ -309,6 +317,7 @@
                 document.getElementById('bracket-view-container').style.display = 'flex';
                 document.getElementById('bracket-view').style.display = 'flex';
 
+                document.getElementById('tournament-title').innerText = document.getElementById('tournament-name-in').value || "TOURNAMENT BRACKET";
                 generateBracket();
             });
         }
@@ -332,8 +341,9 @@
         }
 
         function resetTeams() {
-            if (teams.length > 0 && confirm("Hapus semua tim dari daftar?")) {
+            if (confirm("Hapus semua data turnamen?")) {
                 teams = [];
+                document.getElementById('tournament-name-in').value = "";
                 renderList();
                 localStorage.removeItem('tournamentState');
             }
